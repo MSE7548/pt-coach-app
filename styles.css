@@ -149,12 +149,25 @@ button:disabled { opacity: .4; cursor: default; }
 /* 회원 직접 추가 — 첫 화면에서 막히지 않게 */
 .addrow { display: flex; gap: 8px; margin-top: 14px; }
 .addrow input { flex: 1; min-width: 0; }
-.addrow button { flex: none; padding: 0 18px; }
+.addrow button { flex: none; width: auto; padding: 0 18px; }
 .hint { font-size: .78rem; color: #6b7280; line-height: 1.6; margin-top: 8px; }
 .list li .del {
-  flex: none; margin-left: 8px; border: 0; background: none;
+  /* 전역 button 규칙이 width:100%라 이걸 안 풀면 화면이 옆으로 밀린다 */
+  flex: none; width: auto; margin-left: 8px; border: 0; background: none;
   color: #9ca3af; font-size: 1.1rem; padding: 6px 10px; cursor: pointer;
 }
 .list li .del:active { color: #b45309; }
 .list li { display: flex; align-items: center; }
 .list li > button:first-child { flex: 1; min-width: 0; }
+
+/* 설치 안내 — 기종에 맞는 것만 */
+#install { position: fixed; inset: 0; z-index: 90; background: rgba(17, 24, 39, .5);
+           display: flex; align-items: flex-end; justify-content: center; padding: 16px; }
+#install[hidden] { display: none; }
+.installbox { background: #fff; border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; }
+.installbox b { font-size: 1rem; display: block; margin-bottom: 8px; }
+.installbox p { font-size: .86rem; line-height: 1.75; margin: 0 0 8px; }
+.installbox .why { font-size: .78rem; color: #6b7280; }
+.installbox button { width: 100%; margin-top: 10px; }
+.installbox kbd { background: #f3f4f6; border-radius: 5px; padding: 1px 6px;
+                  font-family: inherit; font-size: .95em; }

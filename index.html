@@ -12,6 +12,17 @@
 </head>
 <body>
 
+<!-- 기종마다 설치 방법이 다르다. 선생님이 그 차이를 설명하는 것도 부탁이므로
+     앱이 알아서 맞는 안내만 띄운다. 홈 화면에서 열었으면 띄우지 않는다. -->
+<div id="install" hidden>
+  <div class="installbox">
+    <b id="install-title"></b>
+    <p id="install-steps"></p>
+    <p class="why" id="install-why"></p>
+    <button type="button" id="install-close">알겠어요</button>
+  </div>
+</div>
+
 <div id="recovery" class="view" hidden>
   <h1>완료되지 않은 녹음</h1>
   <p class="lead" id="recovery-summary"></p>

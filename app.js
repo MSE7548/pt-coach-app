@@ -307,6 +307,68 @@ async function checkRecovery() {
   return true;
 }
 
+
+// ─── 설치 안내 ─────────────────────────────────────────────────────────
+// 기종마다 방법이 다르고, 그 차이를 선생님이 동료에게 설명하는 것도 부탁이다.
+// 앱이 접속한 기기를 보고 맞는 안내만 띄운다.
+//
+// 아이폰은 두 가지가 다르다. 하나는 공유 버튼으로 추가한다는 것이고, 다른
+// 하나는 **홈 화면 추가가 선택이 아니라는 것**이다 — 사파리는 한동안 안 쓴
+// 사이트의 저장 데이터를 지우므로, 추가하지 않으면 넣어둔 회원이 사라질 수 있다.
+function detectPlatform() {
+  const ua = navigator.userAgent;
+  // 아이패드가 데스크톱으로 위장하는 경우까지 잡는다
+  const iOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!iOS) return /Android/.test(ua) ? 'android' : 'other';
+  // iOS에서 크롬·파이어폭스는 홈 화면 추가가 들쭉날쭉하다. 사파리로 안내한다
+  return /CriOS|FxiOS|EdgiOS/.test(ua) ? 'ios-other-browser' : 'ios-safari';
+}
+
+function isInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+const INSTALL_GUIDE = {
+  'ios-safari': {
+    title: '홈 화면에 추가해 주세요',
+    steps: '아래 <kbd>공유 □↑</kbd> 를 누르고 <kbd>홈 화면에 추가</kbd> 를 고르세요.',
+    why: '아이폰은 한동안 안 쓴 사이트의 저장 내용을 지웁니다. 홈 화면에 추가해 두셔야 넣어두신 회원이 남습니다.',
+  },
+  'ios-other-browser': {
+    title: '사파리로 열어주세요',
+    steps: '이 주소를 <kbd>Safari</kbd> 에서 연 뒤, 아래 <kbd>공유 □↑</kbd> → <kbd>홈 화면에 추가</kbd>.',
+    why: '아이폰에서는 사파리로 추가해야 안정적으로 앱처럼 열립니다.',
+  },
+  android: {
+    title: '홈 화면에 추가해 주세요',
+    steps: '주소창 오른쪽 <kbd>⋮</kbd> 를 누르고 <kbd>홈 화면에 추가</kbd> 를 고르세요.',
+    why: '홈 화면에서 열면 주소창 없이 앱처럼 넓게 씁니다.',
+  },
+  other: {
+    title: '휴대폰에서 열어주세요',
+    steps: '수업 중에 쓰는 도구라 휴대폰에서 여는 것을 권합니다.',
+    why: '',
+  },
+};
+
+function showInstallGuide() {
+  if (isInstalled()) return;
+  try { if (localStorage.getItem('installGuideDone')) return; } catch { /* 무시 */ }
+  const g = INSTALL_GUIDE[detectPlatform()];
+  if (!g) return;
+  $('install-title').textContent = g.title;
+  $('install-steps').innerHTML = g.steps;
+  $('install-why').textContent = g.why;
+  $('install-why').hidden = !g.why;
+  $('install').hidden = false;
+  $('install-close').onclick = () => {
+    $('install').hidden = true;
+    try { localStorage.setItem('installGuideDone', '1'); } catch { /* 무시 */ }
+  };
+}
+
 // ─── 시작 ──────────────────────────────────────────────────────────────
 async function main() {
   [members, rounds] = await Promise.all([loadMembers(), getRounds()]);
@@ -341,6 +403,8 @@ async function main() {
   $('again').onclick = () => { renderMembers($('search').value); show('members'); };
 
   if (!await checkRecovery()) show('members');
+
+  showInstallGuide();
 
   if ('Notification' in window && Notification.permission === 'default') {
     document.addEventListener('click', () => Notification.requestPermission(), { once: true });
