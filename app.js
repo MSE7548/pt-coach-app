@@ -342,9 +342,13 @@ const INSTALL_GUIDE = {
     why: '아이폰에서는 사파리로 추가해야 안정적으로 앱처럼 열립니다.',
   },
   android: {
-    title: '홈 화면에 추가해 주세요',
-    steps: '주소창 오른쪽 <kbd>⋮</kbd> 를 누르고 <kbd>홈 화면에 추가</kbd> 를 고르세요.',
-    why: '홈 화면에서 열면 주소창 없이 앱처럼 넓게 씁니다.',
+    // 크롬 버전마다 메뉴 이름이 다르다. 하나만 적으면 못 찾는다 —
+    // 2026-08-14에 실제로 `설치 및 바로가기 만들기`로 바뀐 것을 확인했다.
+    title: '앱으로 설치해 주세요',
+    steps: '주소창 오른쪽 <kbd>⋮</kbd> 를 누르고 '
+      + '<kbd>설치 및 바로가기 만들기</kbd> 를 고르세요. '
+      + '<br>크롬 버전에 따라 <kbd>앱 설치</kbd> 나 <kbd>홈 화면에 추가</kbd> 로 보이기도 합니다.',
+    why: '고른 뒤 바로가기가 아니라 <b>설치</b>를 누르셔야 주소창 없이 앱처럼 열립니다.',
   },
   other: {
     title: '휴대폰에서 열어주세요',
@@ -360,7 +364,7 @@ function showInstallGuide() {
   if (!g) return;
   $('install-title').textContent = g.title;
   $('install-steps').innerHTML = g.steps;
-  $('install-why').textContent = g.why;
+  $('install-why').innerHTML = g.why;
   $('install-why').hidden = !g.why;
   $('install').hidden = false;
   $('install-close').onclick = () => {
