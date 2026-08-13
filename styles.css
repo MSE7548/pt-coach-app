@@ -12,7 +12,10 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  /* 앱으로 설치하면 주소창이 없어져 제목이 상태바에 붙는다. 노치·펀치홀 폰에서는
+     더 붙으므로 안전 영역만큼 띄운다(2026-08-14 실기기 확인). */
+  padding: max(20px, calc(env(safe-area-inset-top) + 12px)) 20px
+           max(40px, calc(env(safe-area-inset-bottom) + 24px));
   max-width: 560px;
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
