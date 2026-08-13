@@ -25,6 +25,13 @@
   <input id="search" type="search" placeholder="이름 검색" autocomplete="off" enterkeyhint="search">
   <ul id="member-list" class="list"></ul>
   <p class="empty" id="member-empty" hidden>회원 목록이 비어 있습니다.</p>
+
+  <!-- 첫 화면에서 막히면 거기서 끝난다. 이름만 쳐서 바로 시작할 수 있어야 한다. -->
+  <form id="add-member" class="addrow" autocomplete="off">
+    <input id="new-member" type="text" placeholder="회원 이름을 적고 추가하세요" enterkeyhint="done">
+    <button type="submit">추가</button>
+  </form>
+  <p class="hint" id="add-hint">적어주신 이름은 <b>이 휴대폰 안에만</b> 저장돼요. 어디로도 보내지 않아요.</p>
 </div>
 
 <div id="confirm" class="view" hidden>

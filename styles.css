@@ -145,3 +145,16 @@ button:disabled { opacity: .4; cursor: default; }
 @media (prefers-color-scheme: dark) {
   #toast { background: #f4f4f5; color: #111; }
 }
+
+/* 회원 직접 추가 — 첫 화면에서 막히지 않게 */
+.addrow { display: flex; gap: 8px; margin-top: 14px; }
+.addrow input { flex: 1; min-width: 0; }
+.addrow button { flex: none; padding: 0 18px; }
+.hint { font-size: .78rem; color: #6b7280; line-height: 1.6; margin-top: 8px; }
+.list li .del {
+  flex: none; margin-left: 8px; border: 0; background: none;
+  color: #9ca3af; font-size: 1.1rem; padding: 6px 10px; cursor: pointer;
+}
+.list li .del:active { color: #b45309; }
+.list li { display: flex; align-items: center; }
+.list li > button:first-child { flex: 1; min-width: 0; }

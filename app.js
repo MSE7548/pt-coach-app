@@ -1,5 +1,6 @@
 import { Recorder, extensionFor } from './recorder.js';
-import { putChunk, listChunks, dropChunks, setActive, getActive, clearActive, bumpRound, getRounds } from './store.js';
+import { putChunk, listChunks, dropChunks, setActive, getActive, clearActive, bumpRound, getRounds,
+         getLocalMembers, addLocalMember, removeLocalMember } from './store.js';
 
 const $ = id => document.getElementById(id);
 const views = ['recovery', 'members', 'confirm', 'recording', 'done'];
@@ -51,15 +52,19 @@ function fmtClock(ms) {
 // 실명은 저장소에 커밋하지 않는다. members.json은 gitignore 대상이고,
 // 없으면 members.sample.json으로 떨어진다. 나중에 Notion 회원 코어 DB와 동기화한다.
 async function loadMembers() {
+  let fromFile = [];
   for (const url of ['members.json', 'members.sample.json']) {
     try {
       const res = await fetch(url, { cache: 'no-cache' });
       if (!res.ok) continue;
       const json = await res.json();
-      if (Array.isArray(json) && json.length) return json;
+      if (Array.isArray(json) && json.length) { fromFile = json; break; }
     } catch { /* 다음 후보로 */ }
   }
-  return [];
+  // 폰에서 직접 넣은 회원이 앞에 온다. 그분들이 오늘 수업할 분들이다.
+  const local = await getLocalMembers();
+  const seen = new Set(local.map(m => m.name));
+  return [...local, ...fromFile.filter(m => !seen.has(m.name))];
 }
 
 function renderMembers(filter = '') {
@@ -80,11 +85,28 @@ function renderMembers(filter = '') {
     btn.append(name, meta);
     btn.onclick = () => pick(m);
     li.append(btn);
+
+    // 직접 넣은 회원만 지울 수 있다. 파일에서 온 목록은 여기서 건드리지 않는다.
+    if (m.local) {
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.textContent = '×';
+      del.title = `${m.name} 지우기`;
+      del.onclick = async e => {
+        e.stopPropagation();
+        if (!confirm(`${m.name}님을 목록에서 지울까요?`)) return;
+        await removeLocalMember(m.id);
+        members = await loadMembers();
+        renderMembers($('search').value);
+      };
+      li.append(del);
+    }
     ul.append(li);
   }
   $('member-empty').hidden = list.length > 0;
   if (!members.length) {
-    $('member-empty').textContent = 'members.json이 없습니다. README를 보세요.';
+    $('member-empty').textContent = '아직 회원이 없어요. 아래에 이름을 적고 추가하세요.';
   }
 }
 
@@ -291,6 +313,19 @@ async function main() {
   renderMembers();
 
   $('search').oninput = e => renderMembers(e.target.value);
+
+  $('add-member').onsubmit = async e => {
+    e.preventDefault();
+    const input = $('new-member');
+    const added = await addLocalMember(input.value);
+    if (!added) return;
+    input.value = '';
+    members = await loadMembers();
+    rounds = await getRounds();
+    $('search').value = '';
+    renderMembers();
+    $('add-hint').textContent = `${added.name}님을 넣었어요. 이름을 누르면 수업을 시작해요.`;
+  };
   $('f-date').onchange = () => refreshFilename();
   $('f-round').oninput = () => { $('f-round-src').className = 'draft confirmed'; };
   $('back').onclick = () => { picked = null; show('members'); };

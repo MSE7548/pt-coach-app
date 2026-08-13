@@ -112,3 +112,38 @@ export async function getRounds() {
     req.onerror = () => reject(req.error);
   });
 }
+
+// ─── 폰에서 직접 넣는 회원 ───────────────────────────────────────────────
+// 첫 화면에서 막히면 거기서 끝난다(2026-08-14). 파일을 폰에 넣는 방법은
+// 안내가 길고 실패하기 쉬우므로, 이름만 쳐서 바로 시작할 수 있게 한다.
+//
+// 실명이 들어가므로 **이 기기 안에만** 있는다. 서버로 보내지 않는다.
+// 나중에 Notion 회원 코어 DB와 맞출 때는 `id`로 잇는다.
+const LOCAL_MEMBERS_KEY = 'local-members';
+
+export async function getLocalMembers() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(META, 'readonly').objectStore(META).get(LOCAL_MEMBERS_KEY);
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function addLocalMember(name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return null;
+  const list = await getLocalMembers();
+  // 같은 이름을 두 번 넣으면 회차가 갈려서 기록이 쪼개진다
+  const found = list.find(m => m.name === trimmed);
+  if (found) return found;
+  const member = { id: `local-${Date.now()}`, name: trimmed, local: true };
+  list.push(member);
+  await tx(META, 'readwrite', s => s.put(list, LOCAL_MEMBERS_KEY));
+  return member;
+}
+
+export async function removeLocalMember(id) {
+  const list = (await getLocalMembers()).filter(m => m.id !== id);
+  await tx(META, 'readwrite', s => s.put(list, LOCAL_MEMBERS_KEY));
+}
