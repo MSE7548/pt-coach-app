@@ -1,6 +1,6 @@
 // 앱 껍데기만 캐시한다. 녹음 데이터는 IndexedDB에 있고 여기서 건드리지 않는다.
 // 이름을 올리면 activate가 낡은 캐시를 지운다. 흰 화면을 고칠 때 함께 올린다.
-const CACHE = 'pt-coach-os-v2';
+const CACHE = 'pt-coach-os-v3';
 const SHELL = [
   '.', 'index.html', 'styles.css', 'app.js', 'store.js', 'recorder.js',
   'manifest.webmanifest', 'icon.svg'

@@ -164,10 +164,18 @@ button:disabled { opacity: .4; cursor: default; }
 #install { position: fixed; inset: 0; z-index: 90; background: rgba(17, 24, 39, .5);
            display: flex; align-items: flex-end; justify-content: center; padding: 16px; }
 #install[hidden] { display: none; }
-.installbox { background: #fff; border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; }
+.installbox { background: #fff; color: #111827; border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; }
 .installbox b { font-size: 1rem; display: block; margin-bottom: 8px; }
 .installbox p { font-size: .86rem; line-height: 1.75; margin: 0 0 8px; }
 .installbox .why { font-size: .78rem; color: #6b7280; }
-.installbox button { width: 100%; margin-top: 10px; }
-.installbox kbd { background: #f3f4f6; border-radius: 5px; padding: 1px 6px;
+.installbox button { width: 100%; margin-top: 10px; color: #111827; }
+.installbox kbd { background: #f3f4f6; color: #111827; border-radius: 5px; padding: 1px 6px;
                   font-family: inherit; font-size: .95em; }
+/* 앱이 다크 모드를 지원하므로(color-scheme) 이 상자만 흰색으로 두면
+   글자가 밝은색을 물려받아 흰 바탕에 흰 글씨가 된다. 2026-08-14에 실제로
+   설치 안내가 통째로 안 보였다. 다크에서는 상자도 어둡게 맞춘다. */
+@media (prefers-color-scheme: dark) {
+  .installbox { background: #1f2430; color: #f4f4f5; }
+  .installbox button { color: #f4f4f5; }
+  .installbox kbd { background: #374151; color: #f4f4f5; }
+}
