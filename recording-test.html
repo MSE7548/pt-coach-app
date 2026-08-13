@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rec Test">
+<title>Background Recording Test</title>
+<!--
+  백그라운드 녹음 지속 시험 도구. 2026-08-11에 iOS PWA를 판정하는 데 썼고,
+  네이티브 래퍼(C안)를 검증할 때 다시 쓴다. 실제 시험자가 외국인이라 영문이다.
+
+  1차 버전에 결함이 있었다. MediaRecorder.stop()이 비동기라 마지막 조각이
+  도착하기 전에 판정을 계산했고, 그래서 62분 동안 아무것도 못 담은 실행에
+  "Continuous — passed" 초록색이 떴다. 지금은 flush를 기다린 뒤 판정하고,
+  조각 수가 기대치에 크게 못 미치면 공백과 무관하게 실패로 적는다.
+-->
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0 auto; padding: 20px;
+         line-height: 1.5; max-width: 640px; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  .sub { opacity: .7; font-size: .85rem; margin-bottom: 20px; }
+  .timer { font-size: 3rem; font-variant-numeric: tabular-nums; font-weight: 600;
+           text-align: center; margin: 16px 0 4px; }
+  .state { text-align: center; font-size: .95rem; margin-bottom: 20px; }
+  .ok { color: #16a34a; } .bad { color: #dc2626; } .warn { color: #d97706; }
+  button { font-size: 1.05rem; padding: 14px 20px; width: 100%; margin-bottom: 10px;
+           border-radius: 12px; border: 1px solid currentColor; background: transparent;
+           color: inherit; }
+  button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button:disabled { opacity: .4; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .card { border: 1px solid rgba(128,128,128,.3); border-radius: 10px; padding: 10px 12px; }
+  .card b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .card span { font-size: .78rem; opacity: .7; }
+  .card.key { border-color: #2563eb; border-width: 2px; }
+  label { display: flex; gap: 8px; align-items: center; font-size: .9rem; margin: 12px 0; }
+  #log { font-family: ui-monospace, monospace; font-size: .72rem; white-space: pre-wrap;
+         border: 1px solid rgba(128,128,128,.3); border-radius: 10px; padding: 10px;
+         height: 220px; overflow: auto; margin-top: 16px; }
+  .steps { font-size: .85rem; background: rgba(128,128,128,.09); border-radius: 10px;
+           padding: 12px 16px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Background Recording Test</h1>
+<div class="sub">Checking whether recording survives 60 minutes with the screen off.</div>
+
+<div class="steps">
+  <ol>
+    <li>Open in <b>Safari</b>, tap Share &rarr; <b>Add to Home Screen</b></li>
+    <li>Quit Safari, launch from the <b>home screen icon</b></li>
+    <li>Tap Start, allow the microphone, then <b>lock the screen</b></li>
+    <li>Leave it alone for 60 minutes, then come back and tap Stop</li>
+  </ol>
+  Low Power Mode <b>off</b> &middot; Do Not Disturb <b>on</b> &middot; charger plugged in.
+  <br><b>Send back the log text and the downloaded file, not just the verdict.</b>
+</div>
+
+<div class="timer" id="timer">00:00:00</div>
+<div class="state" id="state">Idle</div>
+
+<button class="primary" id="start">Start recording</button>
+<button id="stop" disabled>Stop and save</button>
+
+<div class="grid">
+  <div class="card"><b id="chunks">0</b><span>Chunks saved (1 per 10s)</span></div>
+  <div class="card"><b id="size">0</b><span>Total size (MB)</span></div>
+  <div class="card key"><b id="captured">—</b><span>Captured % &larr; key number</span></div>
+  <div class="card"><b id="hidden">0</b><span>Went to background</span></div>
+</div>
+
+<label><input type="checkbox" id="wake"> Keep screen awake (Wake Lock) &mdash; second run only</label>
+
+<div id="log"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CHUNK_MS = 10000;
+let rec, stream, chunks = [], bytes = 0, t0 = 0, tick, lastChunk = 0, maxGap = 0,
+    hiddenCount = 0, wakeLock = null;
+
+function log(msg) {
+  $('log').textContent += `[${new Date().toTimeString().slice(0, 8)}] ${msg}\n`;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return [s / 3600, (s % 3600) / 60, s % 60].map(n => String(Math.floor(n)).padStart(2, '0')).join(':');
+}
+function setState(text, cls) { $('state').textContent = text; $('state').className = 'state ' + (cls || ''); }
+
+$('start').onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    log('Microphone denied or unavailable: ' + e.name);
+    log('If the page is not on https://, iOS blocks the microphone.');
+    setState('No microphone permission', 'bad');
+    return;
+  }
+
+  chunks = []; bytes = 0; maxGap = 0; hiddenCount = 0; lastChunk = 0;
+  rec = new MediaRecorder(stream);
+
+  rec.ondataavailable = e => {
+    if (!e.data || !e.data.size) return;
+    const now = Date.now();
+    if (lastChunk) maxGap = Math.max(maxGap, (now - lastChunk) / 1000);
+    lastChunk = now;
+    chunks.push(e.data); bytes += e.data.size;
+    $('chunks').textContent = chunks.length;
+    $('size').textContent = (bytes / 1048576).toFixed(1);
+  };
+  rec.onerror = e => { log('!! recorder error: ' + (e.error && e.error.name)); setState('Error', 'bad'); };
+
+  const track = stream.getAudioTracks()[0];
+  track.onended = () => log('!! audio track ended (microphone lost)');
+  track.onmute = () => log('!! track muted — the system took the microphone away');
+  track.onunmute = () => log('track unmuted');
+
+  rec.start(CHUNK_MS);
+  t0 = Date.now();
+  tick = setInterval(() => { $('timer').textContent = fmt(Date.now() - t0); }, 1000);
+
+  $('start').disabled = true; $('stop').disabled = false;
+  setState('Recording — now lock the screen', 'ok');
+  log(`Recording started. Chunk interval ${CHUNK_MS / 1000}s.`);
+
+  if ($('wake').checked && 'wakeLock' in navigator) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); log('Wake Lock acquired'); }
+    catch (e) { log('Wake Lock failed: ' + e.name); }
+  }
+};
+
+$('stop').onclick = async () => {
+  clearInterval(tick);
+  $('stop').disabled = true;
+
+  // stop()은 비동기다. 마지막 조각이 도착한 뒤에 판정해야 한다.
+  // 이 await가 없으면 아무것도 못 담은 실행이 "통과"로 표시된다.
+  await new Promise(resolve => {
+    if (!rec || rec.state === 'inactive') return resolve();
+    rec.onstop = () => resolve();
+    rec.stop();
+  });
+
+  stream && stream.getTracks().forEach(t => t.stop());
+  wakeLock && wakeLock.release().catch(() => {});
+  $('start').disabled = false;
+
+  const elapsed = (Date.now() - t0) / 1000;
+  const expected = Math.max(1, Math.floor(elapsed / (CHUNK_MS / 1000)));
+  const captured = Math.round(chunks.length / expected * 100);
+  $('captured').textContent = captured + '%';
+
+  log(`Stopped. Elapsed ${fmt(Date.now() - t0)} / ${chunks.length} chunks / longest gap ${maxGap.toFixed(0)}s`);
+  log(`Expected ~${expected} chunks, got ${chunks.length} → ${captured}% captured`);
+
+  // 조각 수가 곧 진실이다. 공백만 보면 조각이 하나뿐일 때 공백이 0으로 남아 통과처럼 보인다.
+  const passed = captured >= 90 && maxGap <= 30;
+  log('VERDICT: ' + (passed ? 'recording stayed continuous.' : 'recording was interrupted.'));
+  setState(passed ? 'Continuous — passed' : `Interrupted — ${captured}% captured`, passed ? 'ok' : 'bad');
+
+  if (chunks.length) {
+    const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `rec-test-${Date.now()}.${(rec.mimeType || '').includes('mp4') ? 'm4a' : 'webm'}`;
+    a.textContent = 'Download the recording';
+    a.style.cssText = 'display:block;text-align:center;padding:14px;margin-top:10px';
+    document.body.insertBefore(a, $('log'));
+    log(`File size ${(blob.size / 1024).toFixed(1)} KB — a near-empty file means no audio was captured.`);
+  }
+};
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenCount++; $('hidden').textContent = hiddenCount; log('→ went to background'); }
+  else log('← back to foreground');
+});
+
+log('Ready. Must be opened over https:// and launched from the home screen icon.');
+</script>
+</body>
+</html>

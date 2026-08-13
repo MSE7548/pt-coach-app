@@ -1,0 +1,19 @@
+{
+  "name": "PT Coach OS",
+  "short_name": "PT Coach",
+  "description": "회원을 고르고 한 번에 녹음을 시작한다.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

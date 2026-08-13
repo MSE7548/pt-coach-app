@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PT Coach">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+<title>PT Coach OS</title>
+</head>
+<body>
+
+<div id="recovery" class="view" hidden>
+  <h1>완료되지 않은 녹음</h1>
+  <p class="lead" id="recovery-summary"></p>
+  <button class="primary" data-recover="resume">이어서 녹음</button>
+  <button data-recover="save">여기까지 저장</button>
+  <button class="danger" data-recover="discard">버리기</button>
+</div>
+
+<div id="members" class="view">
+  <h1>회원 선택</h1>
+  <input id="search" type="search" placeholder="이름 검색" autocomplete="off" enterkeyhint="search">
+  <ul id="member-list" class="list"></ul>
+  <p class="empty" id="member-empty" hidden>회원 목록이 비어 있습니다.</p>
+</div>
+
+<div id="confirm" class="view" hidden>
+  <h1 id="confirm-name"></h1>
+  <p class="lead">틀린 것만 고치고 시작하세요.</p>
+
+  <label class="field">
+    <span>날짜</span>
+    <input id="f-date" type="date">
+  </label>
+  <label class="field">
+    <span>시작 시각</span>
+    <input id="f-time" type="time">
+  </label>
+  <label class="field">
+    <span>녹음 회차 <em id="f-round-src" class="draft">자동</em></span>
+    <input id="f-round" type="number" min="1" step="1">
+  </label>
+
+  <p class="filename">파일명 <code id="f-filename"></code></p>
+
+  <button class="primary" id="copy">파일명 복사</button>
+  <p class="hint" id="record-hint">
+    음성 메모로 녹음하고 이 이름으로 저장하세요.
+    iOS는 화면을 끄면 웹 녹음을 이어가지 못합니다(2026-08-11 실측).
+  </p>
+
+  <button class="primary" id="start" hidden>녹음 시작</button>
+  <button id="back">회원 다시 고르기</button>
+</div>
+
+<div id="recording" class="view" hidden>
+  <h1 id="rec-name"></h1>
+  <div class="timer" id="timer">00:00:00</div>
+  <div class="state" id="rec-state">녹음 중</div>
+
+  <div class="grid">
+    <div class="card"><b id="rec-chunks">0</b><span>저장된 조각</span></div>
+    <div class="card"><b id="rec-size">0</b><span>누적 (MB)</span></div>
+  </div>
+
+  <button class="primary" id="finish">수업 종료</button>
+  <button id="next-member">종료하고 다음 회원</button>
+</div>
+
+<div id="done" class="view" hidden>
+  <h1>저장됨</h1>
+  <p class="lead" id="done-summary"></p>
+  <a id="download" class="button" download>파일 내려받기</a>
+  <button class="primary" id="again">다음 회원</button>
+</div>
+
+<div id="toast" hidden></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
